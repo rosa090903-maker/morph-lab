@@ -227,10 +227,10 @@
      *  samples.json = [{ "image": "a.jpg", "mask": "a.mask.png" }, …] — mask(흑백 PNG, 흰색 = 피사체)가 있으면 모델 없이 바로 'ready',
      *  없으면 보통 사진처럼 누끼 대기열로. file:// 로 열었거나 samples 폴더가 없으면 조용히 건너뜀
      */
-    const SAMPLES_DIR = 'samples/', SEEDED_KEY = 'polar-samples-seeded';
-    const seeded = () => { try { return localStorage.getItem(SEEDED_KEY) === '1'; } catch (e) { return false; } };
-    async function maskFromPng(url) {
-      const img = await DT.loadImageFile(await (await fetch(url)).blob());
+    const SAMPLES_DIR = 'samples/';
+    const getBlob = async (url) => { const r = await fetch(url); if (!r.ok) throw new Error(`HTTP ${r.status} ${url}`); return r.blob(); };
+    async function maskFromPng(blobP) {
+      const img = await DT.loadImageFile(await blobP);
       const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
       const c = document.createElement('canvas'); c.width = w; c.height = h;
       const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0);
@@ -242,18 +242,21 @@
       let list;
       try { const r = await fetch(SAMPLES_DIR + 'samples.json', { cache: 'no-cache' }); if (!r.ok) return; list = await r.json(); } catch (e) { return; }
       if (!Array.isArray(list) || !list.length) return;
-      try { localStorage.setItem(SEEDED_KEY, '1'); } catch (e) { /* 저장 불가 — 다음에 또 넣음 */ }
+      // 파일은 한꺼번에 받기 시작하고(느린 휴대폰 망에서도 빨리), 처리는 한 장씩 — 한 장 끝날 때마다 고리에 바로 보임
+      const files = list.map((s) => ({ s, img: getBlob(SAMPLES_DIR + s.image), mask: s.mask ? getBlob(SAMPLES_DIR + s.mask) : null }));
+      files.forEach((f) => { f.img.catch(() => {}); if (f.mask) f.mask.catch(() => {}); });   // 실패는 아래에서 한 장씩 처리
       let created = Date.now();
-      for (const s of list) {
+      for (const f of files) {
         try {
-          const blob = await (await fetch(SAMPLES_DIR + s.image)).blob();
-          const it = { id: 'sample-' + s.image, blob, mask: null, created: created++, state: 'busy' };
-          if (s.mask) it.mask = await maskFromPng(SAMPLES_DIR + s.mask);
+          const blob = await f.img;
+          const it = { id: 'sample-' + f.s.image, blob, mask: null, created: created++, state: 'busy' };
+          if (f.mask) { try { it.mask = await maskFromPng(f.mask); } catch (err) { it.mask = null; } }   // 마스크를 못 읽으면 보통 사진처럼 누끼 대기열로
           it.thumb = makeThumb(await imgOf(it), it.mask);
           if (it.mask) it.state = 'ready'; else queue.push(it);
           items.push(it);
+          render();
           await tx(db, 'readwrite', (st) => st.put({ id: it.id, blob: it.blob, mask: it.mask, created: it.created }));
-        } catch (err) { console.warn('[POLAR] sample could not be added:', s, err); }
+        } catch (err) { console.warn('[POLAR] sample could not be added:', f.s, err); }
       }
     }
 
@@ -268,8 +271,10 @@
         try { it.thumb = makeThumb(await imgOf(it), r.mask); } catch (err) { continue; }
         items.push(it);
         if (!r.mask) queue.push(it);
+        render();   // 한 장씩 바로 고리에
       }
-      if (!rows.length && !seeded()) await seedSamples();   // 첫 방문: 기본 샘플
+      // 갤러리가 비어 있으면 기본 샘플 (첫 방문 · 지난번에 넣다가 끊긴 경우 · 다 지운 경우 모두 — 빈 고리로 멈춰 있지 않게)
+      if (!items.length) await seedSamples();
       render();
       if (queue.length && !running) run();
     })();
