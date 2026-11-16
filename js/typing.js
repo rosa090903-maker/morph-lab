@@ -57,7 +57,7 @@
     let nextId = 1, seq = 0, cur = null;
     const ta = document.createElement('textarea');
     ta.setAttribute('aria-label', 'Type text'); ta.autocomplete = 'off'; ta.spellcheck = false;
-    Object.assign(ta.style, { position: 'fixed', left: '0', top: '0', width: '2px', height: '2px', opacity: '0', padding: '0', border: '0', resize: 'none', pointerEvents: 'none', zIndex: '-1' });
+    Object.assign(ta.style, { position: 'fixed', left: '0', top: '0', width: '2px', height: '2px', opacity: '0', padding: '0', border: '0', resize: 'none', pointerEvents: 'none', zIndex: '-1', fontSize: '16px' });   // 16px: iOS 가 입력칸에 초점이 갈 때 화면을 확대하지 않게
     document.body.appendChild(ta);
     const caret = document.createElement('div');
     caret.className = 'type-caret'; caret.hidden = true;
@@ -266,6 +266,7 @@
           entries.push(cur);
         }
         ta.value = cur.text;
+        try { ta.focus({ preventScroll: true }); } catch (e) { /* */ }   // 터치 기기: 누른 순간(사용자 동작 안)에 초점을 줘야 키보드가 뜸 (iOS)
         setTimeout(() => { ta.focus({ preventScroll: true }); ta.setSelectionRange(ta.value.length, ta.value.length); placeCaret(); }, 0);
         placeCaret();
       },

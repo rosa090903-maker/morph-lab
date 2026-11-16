@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Laboratory</title>
   <meta name="description" content="Drop a photo, then lower the temperature to −10 °C or below to freeze it">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23030407'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23ffffff' stroke-width='2'/%3E%3C/svg%3E">
@@ -13,6 +13,7 @@
   <!-- Type 카드 표본 글꼴 S-02 (Noto Serif KR) 도 여기서 받음 — 오프라인이면 바탕체로. 나머지 표본 글꼴은 fonts/ 폴더 -->
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/refpanel.css">
+  <link rel="stylesheet" href="css/mobile.css">
   <!-- file:// 로 열리면 로컬 서버(start.cmd, localhost:5174)로 옮겨 감 — 없으면 작은 안내 (js/serve.js) -->
   <script src="js/serve.js"></script>
 </head>
@@ -116,6 +117,8 @@
         <button type="button" class="switch" id="labSw" role="switch" aria-checked="false" aria-label="Lab mode"><i></i></button>
       </section>
       <!-- 오른쪽 위: Archive — 셔터로 찍어 보관한 포스터들 (js/archive.js) -->
+      <!-- 터치 화면 전용: 셔터 (데스크톱의 Space 키와 같음 — 지금 화면을 아카이브에 보관) -->
+      <button type="button" class="reset-btn shot-btn" id="shotBtn" title="Capture this moment to the archive"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3l1.6-2.5h6.8L17 8.5h3v10H4z"/><circle cx="12" cy="13.2" r="3.4"/></svg>Capture</button>
       <button type="button" class="reset-btn" id="archBtn" title="Open the archive of photos you took"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.2"/></svg>Archive</button>
       <!-- 오른쪽 위: Record — 패널 없이 작품만 영상으로 녹화 (R) · 다시 누르면 멈추고 내려받음 (js/app.js startRecording) -->
       <button type="button" class="reset-btn rec-btn" id="recBtn" title="Record a video of the artwork without the panels (R)"><i class="rec-dot" aria-hidden="true"></i><span id="recTime">Record</span></button>
@@ -138,6 +141,9 @@
       <!-- 누끼 따는 동안(화면이 뿌얘질 때) 오른쪽 위에 기다림 안내 -->
       <div class="wait-note" id="waitNote" role="status" hidden><i aria-hidden="true"></i>Cutting out your sample — please wait a moment…</div>
 
+      <!-- 휴대폰(≤1000px): 아래 서랍 — 상태바 + 조절 카드를 접고 펼침 (css/mobile.css · js/mobile.js). 데스크톱에서는 상자 없음(display: contents) -->
+      <div class="sheet" id="sheet" data-open="false">
+      <button type="button" class="sheet-handle" id="sheetBtn" aria-expanded="false" aria-controls="sheet"><i aria-hidden="true"></i><span>Controls</span></button>
       <!-- 오른쪽 열: Mix/Vitality · Reactivity · 기온 · 습도 · 공기 / 왼쪽 열(col-left): Color · Light -->
       <div class="col-right">
         <!-- Lab mix: Lab mode 에서만 보임 — 5개 모드를 각각 켜고 꺼서 함께 씀 (기온·습도·산소 조건과 무관) -->
@@ -244,6 +250,7 @@
         <div class="m-tile" data-mode="slime"><canvas class="m-pic" aria-hidden="true"></canvas><span class="m-name">Slime</span><b id="sumSlime">0%</b></div>
         <div class="m-tile" data-mode="moss"><canvas class="m-pic" aria-hidden="true"></canvas><span class="m-name">Moss</span><b id="sumMoss">0%</b></div>
       </div>
+      </div><!-- /sheet -->
       <!-- 재생 (지금은 숨김) -->
       <section class="card panel c-play">
         <header class="c-head"><span class="c-label">Playback</span><span class="c-hint">10 s steps</span></header>
@@ -320,5 +327,6 @@
   <script src="js/notebook.js"></script>
   <script src="js/app.js"></script>
   <script src="js/refpanel.js"></script>
+  <script src="js/mobile.js"></script>
 </body>
 </html>

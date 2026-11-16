@@ -637,7 +637,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--teal); outl
  */
 .intro { position: absolute; inset: 0; z-index: 6; overflow: hidden; }
 .intro[hidden] { display: none; }
-.stage[data-intro="on"] .hud > :not(.notice) { opacity: 0; pointer-events: none; }
+.stage[data-intro="on"] .hud > :not(.notice), .stage[data-intro="on"] .hud > .sheet > * { opacity: 0; pointer-events: none; }
 .ring-wrap { position: absolute; inset: 0; perspective: 2200px; perspective-origin: 50% 46%; pointer-events: none; }
 .ring {
   --R: min(34vw, 47vh); --tilt: -30deg; --spin: 0deg;
@@ -681,10 +681,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--teal); outl
 @keyframes intro-zoom-ring { to { transform: scale(2.8); opacity: 0; filter: blur(6px); } }
 @keyframes intro-zoom-title { to { transform: translate(-50%, -50%) scale(2.2); opacity: 0; filter: blur(4px); } }
 .stage.entering .frame { animation: main-zoom-in 1.2s cubic-bezier(0.2, 0.7, 0.2, 1) 0.15s both; }
-.stage.entering .hud > :not(.notice) { animation: main-fade-in 0.8s ease-out 0.45s both; }
+.stage.entering .hud > :not(.notice):not(.sheet), .stage.entering .hud > .sheet > * { animation: main-fade-in 0.8s ease-out 0.45s both; }
 @keyframes main-zoom-in { from { transform: translate(-50%, -50%) scale(0.82); opacity: 0; } }
 @keyframes main-fade-in { from { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .intro.leaving .ring-wrap, .intro.leaving .intro-title, .stage.entering .frame, .stage.entering .hud > * { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .intro.leaving .ring-wrap, .intro.leaving .intro-title, .stage.entering .frame, .stage.entering .hud > *, .stage.entering .hud > .sheet > * { animation: none; } }
 /*
  * 본 화면 정리: 오른쪽 위 상태 글·Playback 카드는 숨김 (요소는 상태 전달용으로 남김), 오른쪽 위에 Reset
  *  패널(카드·모드 상태바·사진 목록)의 네모 테두리 없앰 — 유리 바탕과 그림자만
@@ -735,7 +735,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--teal); outl
  *  전환(.leaving)은 오프닝 규칙(.intro …)을 그대로 씀
  */
 .archive { z-index: 7; background: #020305; }
-.stage[data-archive="on"] .hud > :not(.notice) { opacity: 0; pointer-events: none; }
+.stage[data-archive="on"] .hud > :not(.notice), .stage[data-archive="on"] .hud > .sheet > * { opacity: 0; pointer-events: none; }
 .archive .intro-title { cursor: default; }
 /* 포스터가 있으면 제목은 왼쪽 위로 (뒤로 가기 화살표 옆) */
 .archive[data-empty="false"] .intro-title { left: 76px; top: 24px; transform: none; font-size: clamp(30px, 2.8vw, 48px); }

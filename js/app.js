@@ -9,6 +9,8 @@
   const capture = (el, id) => { try { el.setPointerCapture(id); } catch (e) { /* 무시 */ } };
   const $ = (id) => document.getElementById(id);
   const qs = new URLSearchParams(location.search);
+  // 터치 화면(휴대폰·태블릿): 안내 문구를 '누르기'로, 키·오른쪽 클릭 대신 버튼·길게 누르기 (js/mobile.js · css/mobile.css)
+  const TOUCH = !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches);
 
   const state = {
     text: C.defaultText,
@@ -591,9 +593,9 @@
     // 성에 모드: 오른쪽 클릭한 자리에서도 글자 입력 시작 (왼쪽 클릭은 아래 — 빈 곳이면 입력, 사진이면 편집) — 친 글자는 얼음 점으로 (js/frosttype.js)
     frame.addEventListener('contextmenu', (e) => { if (lab.on || (typing && frostTyping())) e.preventDefault(); });
     // Lab mode: 오른쪽 클릭한 사진·글자만 Mix 카드로 고름 (빈 곳 = 전체 Mix 로 돌아감)
-    frame.addEventListener('pointerdown', (e) => {
-      if (e.button !== 2 || !ice || !lab.on) return;
-      e.preventDefault(); e.stopImmediatePropagation();
+    // 오른쪽 클릭 동작 (터치 = 길게 누르기) — 처리했으면 true
+    const pickForMix = (e) => {
+      if (!ice || !lab.on) return false;
       const p = toCss(e), t = typing ? typing.pick(p[0], p[1], true) : null;
       if (t) { mixTarget = typing.keyOf(t); layerKind = 'text'; }
       else {
@@ -601,19 +603,35 @@
         if (id != null) { select(id); mixTarget = id; } else mixTarget = null;
       }
       renderLab();
+      return true;
+    };
+    const frostTypeAt = (e) => {
+      if (!typing || !ice || lab.on || !frostTyping()) return false;
+      typing.start(...toCss(e), ice ? ice.view.zoom : 1);
+      return true;
+    };
+    frame.addEventListener('pointerdown', (e) => {
+      if (e.button !== 2 || !ice || !lab.on) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      pickForMix(e);
     });
     frame.addEventListener('pointerdown', (e) => {
       if (e.button !== 2 || !typing || !ice || lab.on || !frostTyping()) return;
       e.preventDefault();
-      typing.start(...toCss(e), ice ? ice.view.zoom : 1);
+      frostTypeAt(e);
     });
     // 타이포: 더블클릭한 자리에서 글자 입력 시작 (사진 위·빈 곳 모두, 치는 글자가 그 모드의 재료로 그려짐 — 성에 모드는 얼음 점, js/frosttype.js)
-    //  이미 친 글자를 더블클릭하면 그 글자에 이어서 침
-    frame.addEventListener('dblclick', (e) => {
-      if (!typing || !ice || (e.target.closest && e.target.closest('.sel-h')) || !(typingMode() || frostTyping())) return;
-      e.preventDefault();
+    //  이미 친 글자를 더블클릭하면 그 글자에 이어서 침 (터치 = 두 번 톡톡 — 아래 setupTouch)
+    const typeAt = (e) => {
+      if (!typing || !ice || (e.target.closest && e.target.closest('.sel-h')) || !(typingMode() || frostTyping())) return false;
       typing.start(...toCss(e), ice.view.zoom);
       layerKind = 'text';
+      return true;
+    };
+    let touchDblAt = 0;   // 터치 두 번 톡톡을 직접 처리했으면 브라우저가 뒤따라 보내는 dblclick 은 무시
+    frame.addEventListener('dblclick', (e) => {
+      if (performance.now() - touchDblAt < 600) { e.preventDefault(); return; }
+      if (typeAt(e)) e.preventDefault();
     });
     // 친 글자 끌어 옮기기 — 사진 편집·미생물 심기보다 먼저 (capture). 단, 글자가 그 자리 사진보다 뒤에 있으면 사진이 잡힘
     let textDrag = null;
@@ -701,6 +719,70 @@
       edit = null; frame.classList.remove('editing');
     };
     frame.addEventListener('pointerup', end); frame.addEventListener('pointercancel', end);
+    /*
+     * 터치 (휴대폰·태블릿)
+     *  두 손가락 벌리기·오므리기 = 확대·축소 (마우스 휠 대신)
+     *  두 번 톡톡 = 그 자리에서 글자 입력 (더블클릭 대신) — 키보드가 뜨도록 click 이벤트 안에서 시작
+     *  길게 누르기 = Lab mode 에서 그 사진·글자만 Mix 로 고르기 (오른쪽 클릭 대신)
+     */
+    const touches = new Map();   // pointerId → { x, y }
+    let pinch = null, longT = 0, down = null, tapPrev = null, typeTap = null;
+    const clearLong = () => { clearTimeout(longT); longT = 0; };
+    const stopOneFinger = () => { edit = null; textDrag = null; frame.classList.remove('editing'); if (corrode) corrode.press(false); };
+    const onFrame = (e) => e.target === frame || (e.target && e.target.nodeType === 1 && frame.contains(e.target) && !e.target.closest('.sel-h'));
+    window.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'touch' || !onFrame(e)) return;
+      touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (touches.size === 1) {
+        down = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId, moved: false, long: false };
+        clearLong();
+        const ev = { clientX: e.clientX, clientY: e.clientY, target: e.target };
+        longT = setTimeout(() => {
+          longT = 0;
+          if (!down || down.moved || touches.size !== 1) return;
+          if (pickForMix(ev)) { down.long = true; stopOneFinger(); if (navigator.vibrate) navigator.vibrate(12); }
+        }, 550);
+        return;
+      }
+      // 두 번째 손가락: 한 손가락 조작(사진 옮기기 · 글자 끌기 · 심기)을 멈추고 확대·축소로
+      clearLong(); if (down) down.moved = true;
+      stopOneFinger();
+      e.stopPropagation();
+      if (!ice) return;
+      const [a, b] = [...touches.values()];
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, z: ice.zoomTarget };
+    }, true);
+    window.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'touch' || !touches.has(e.pointerId)) return;
+      touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (down && e.pointerId === down.id && !down.moved && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 10) { down.moved = true; clearLong(); }
+      if (!pinch || touches.size < 2 || !ice) return;
+      const [a, b] = [...touches.values()], r = frame.getBoundingClientRect();
+      const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+      const cx = ((a.x + b.x) / 2 - r.left) / r.width, cy = ((a.y + b.y) / 2 - r.top) / r.height;
+      ice.setZoom(pinch.z * d / pinch.d, cx * ice.canvas.width, cy * ice.canvas.height);
+      e.stopPropagation();
+    }, true);
+    const touchEnd = (e) => {
+      if (e.pointerType !== 'touch' || !touches.has(e.pointerId)) return;
+      touches.delete(e.pointerId);
+      if (touches.size < 2) pinch = null;
+      if (touches.size) return;
+      clearLong();
+      const d = down; down = null;
+      const now = performance.now();
+      if (!d || d.moved || d.long || e.type === 'pointercancel' || now - d.t > 350) { tapPrev = null; return; }
+      if (tapPrev && now - tapPrev.t < 400 && Math.hypot(e.clientX - tapPrev.x, e.clientY - tapPrev.y) < 30) {
+        tapPrev = null;
+        typeTap = { clientX: e.clientX, clientY: e.clientY, target: e.target, t: now };   // 이어지는 click 에서 입력 시작
+      } else tapPrev = { t: now, x: e.clientX, y: e.clientY };
+    };
+    window.addEventListener('pointerup', touchEnd, true); window.addEventListener('pointercancel', touchEnd, true);
+    frame.addEventListener('click', () => {
+      const t = typeTap; typeTap = null;
+      if (t && performance.now() - t.t < 600 && typeAt(t)) touchDblAt = performance.now();
+    });
+    if (TOUCH) frame.addEventListener('contextmenu', (e) => e.preventDefault());   // 길게 누를 때 브라우저 메뉴 대신
     // Delete 키: 선택한 사진 삭제
     document.addEventListener('keydown', (e) => {
       if ((e.key === 'Delete' || e.key === 'Backspace') && selected != null && !(e.target.matches && e.target.matches('input, textarea'))) { e.preventDefault(); removePhoto(selected); }
@@ -1062,7 +1144,7 @@
     };
     mr.start(1000);
     $('recBtn').classList.add('rec-on'); $('recBtn').title = 'Stop recording and save the video (R)'; $('recTime').textContent = '0:00';
-    flashNotice('Recording — the panels are not included. Press R again to stop.');
+    flashNotice(TOUCH ? 'Recording — the panels are not included. Tap Record again to stop.' : 'Recording — the panels are not included. Press R again to stop.');
   }
   function stopRecording() {
     if (!rec) return;
@@ -1218,6 +1300,8 @@
       e.preventDefault();   // 포커스된 버튼·스위치가 눌리지 않게
       shoot();
     });
+    if ($('shotBtn')) $('shotBtn').addEventListener('click', shoot);   // 터치 화면의 셔터 버튼 = Space
+    if (TOUCH) { const h = document.querySelector('.arch-hint'); if (h) h.textContent = 'Tap Capture to archive a sample.'; }
   }
 
   /*
@@ -2031,7 +2115,7 @@
     const picked = [], tg = lab.on ? mixTarget : null;
     $('mixGrid').querySelectorAll('.mix-btn').forEach((b) => { const m = b.dataset.mode, on = tg != null ? modeOn(tg, m) : lab[m]; b.setAttribute('aria-pressed', String(!!on)); if (on) picked.push(m); });
     const n = Object.keys(LAB_MODES).length;
-    if (tg == null) $('mixHint').textContent = picked.length ? `${picked.length} of ${n} on · all` : 'pick modes · right-click an object';
+    if (tg == null) $('mixHint').textContent = picked.length ? `${picked.length} of ${n} on · all` : (TOUCH ? 'pick modes · long-press an object' : 'pick modes · right-click an object');
     else {
       const name = typeof tg === 'number' ? `Photo ${trayOrder.indexOf(tg) + 1}` : typing && typing.current && typing.keyOf(typing.current) === tg ? `T-${String(typing.current.no).padStart(2, '0')}` : 'Text';
       $('mixHint').textContent = `${name} only${objMix.has(tg) ? '' : ' (follows all)'}`;
@@ -2263,9 +2347,9 @@
       : state.paused || state.timeScale === 0 ? null
       : lab.on ? (mixed.length ? null : 'Pick a few modes in Mix and I’ll blend them.')
       : !hasPhoto && !state.vitality ? 'Give me a sample — press + at the top left to choose one.'
-      : cold && k > 0.97 ? 'I’m frozen solid — press Space to keep this moment.'
+      : cold && k > 0.97 ? (TOUCH ? 'I’m frozen solid — tap Capture to keep this moment.' : 'I’m frozen solid — press Space to keep this moment.')
       : cold || clock > 0.05 || corroding() ? null
-      : deserting() ? 'I’m turning to sand — sweep me with your cursor.'
+      : deserting() ? (TOUCH ? 'I’m turning to sand — sweep me with your finger.' : 'I’m turning to sand — sweep me with your cursor.')
       : sliming() ? (hasPhoto ? 'Raise Growth Rate to make the slime mold hungrier.' : 'Give me a sample — slime mold will grow inside it.')
       : mossing() ? (hasPhoto ? null : 'Give me a sample and moss will cover it.')
       : lightOnly('slime') ? `${cap(lightOnly('slime'))} and slime mold will wake up.`   // 빛만 안 맞을 때 (어둡게)
@@ -2276,10 +2360,10 @@
       : state.vitality && T >= DT.MICROBE.deathTemp ? (colonies ? 'Cool me down before the microbes die.' : 'It’s too hot for anything to live — cool me down.')
       : state.vitality && T >= DT.MICROBE.maxTemp ? `Cool me below +${DT.MICROBE.maxTemp}° so life can grow.`
       : state.vitality && T >= DT.MICROBE.minTemp && state.humidity < DT.MICROBE.humFrom ? `Raise the humidity to ${DT.MICROBE.humFrom}% and life will come.`
-      : state.vitality ? (T >= DT.MICROBE.minTemp ? (colonies ? null : 'Click anywhere on me to plant microbes.') : colonies ? null : `Warm me to +${DT.MICROBE.minTemp}° so life can grow.`)
+      : state.vitality ? (T >= DT.MICROBE.minTemp ? (colonies ? null : TOUCH ? 'Tap anywhere on me to plant microbes.' : 'Click anywhere on me to plant microbes.') : colonies ? null : `Warm me to +${DT.MICROBE.minTemp}° so life can grow.`)
       : `Lower the temperature to ${fmtDeg(DT.ICE.frostPoint)} or below and I’ll start to freeze.`;
     // 조건으로 알 수 없는 일은 해낸 표시(dashDone)로 — 시킬 말이 바뀌면 표시를 지워, 나중에 다시 그 상황이 오면 또 말함
-    const ask = guide ? 'g:' + guide.key : title && title.includes('Space') ? 'keep' : title && title.includes('sweep') ? 'sweep' : title && title.includes('Growth Rate') ? 'react' : title;
+    const ask = guide ? 'g:' + guide.key : title && (title.includes('Space') || title.includes('Capture')) ? 'keep' : title && title.includes('sweep') ? 'sweep' : title && title.includes('Growth Rate') ? 'react' : title;
     if (ask !== renderDash.ask) { renderDash.ask = ask; dashDone.clear(); }
     const line = title && !dashDone.has(ask) ? maxSentences(title, 3) : null;   // 말풍선은 3문장까지
     talkStep(line, ask);
@@ -2576,6 +2660,8 @@
     get fieldStyle() { return field ? scene().glyph : null; },
     get dotsScene() { return particles.sceneId; },
     get fade() { return fade; },
+    get zoom() { return ice ? ice.zoomTarget : 1; },          // 검증용: 확대 배율 (휠 · 두 손가락)
+    get typingNow() { return !!(typing && typing.editing); },  // 검증용: 글자 입력 중인지 (더블클릭 · 두 번 톡톡)
     get particleCount() { return particles.count; },
     get frost() { return { freeze: frost.freeze, photo: frost.hasPhoto, temperature: frost.temperature, applied: frost.appliedTemperature, levels: frost.levels, branches: frost.branchCount, nuclei: frost.nuclei, fronts: frost.fronts, thaw: frost.thaw, wind: frost.wind, view: frost.view, running: frost.running }; },
     setTemperature,

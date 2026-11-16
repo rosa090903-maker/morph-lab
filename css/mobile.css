@@ -1,0 +1,145 @@
+/*
+ * 휴대폰·태블릿 (≤1000px) — 작품이 화면에 보이게, 조절 카드는 아래 서랍으로 (js/mobile.js)
+ *   위 1줄: ← (오프닝) · 사진 목록 + '+' · References(점)
+ *   위 2줄: Lab mode · Capture · Archive · Record · Reset · Undo · Notebook · Layer — 옆으로 밀어 봄 (아이콘만)
+ *   그 아래: 말풍선 · 알림
+ *   아래: 서랍 — 접힘 = 손잡이 + 모드 상태바, 펼침 = 조절 카드 전체 (서랍 안에서 스크롤)
+ * 데스크톱(1001px 이상)에서는 .sheet 가 상자 없이 그대로 (display: contents) — 기존 배치 그대로
+ */
+.sheet { display: contents; }
+.sheet-handle, .hud .shot-btn { display: none; }
+
+/* 터치: 작품 위 손가락 조작이 브라우저 스크롤·확대로 새지 않게 (확대·축소는 js/app.js 의 두 손가락) */
+.frame { touch-action: none; -webkit-touch-callout: none; }
+@media (hover: none) and (pointer: coarse) {
+  .hud .shot-btn { display: inline-flex; }
+  .hud [role="slider"], .hud .pill { touch-action: none; }
+  .sel-h { width: 24px; height: 24px; }   /* 사진 크기 조절 손잡이: 손가락으로 잡히게 */
+  button, [role="slider"], .r-pick, .g-pick { -webkit-tap-highlight-color: transparent; }
+}
+
+@media (max-width: 1000px) {
+  .stage { --sa-t: env(safe-area-inset-top, 0px); --sa-b: env(safe-area-inset-bottom, 0px); --sa-l: env(safe-area-inset-left, 0px); --sa-r: env(safe-area-inset-right, 0px); }
+  .hud .shot-btn { display: inline-flex; }
+
+  /* 대시보드 = 화면 전체를 덮는 투명 층 (스크롤 없음) — 카드가 놓인 곳만 손가락을 받음 */
+  .stage .hud { inset: 0; display: block; overflow: visible; padding: 0; }
+  /* 데스크톱 격자의 justify-self/align-self(start·end)가 절대 위치 상자를 내용 폭으로 줄이지 않게 (left·right 둘 다 쓰는 상자) */
+  .stage .hud > .tray, .stage .hud > .top-right, .stage .hud > .card.panel.status, .stage .hud > .wait-note, .stage .hud > .gallery, .stage .hud > .sheet { justify-self: normal; align-self: normal; }
+
+  /* 위 1줄 */
+  .stage .hud .back-btn { position: absolute; left: calc(12px + var(--sa-l)); top: calc(12px + var(--sa-t)); width: 44px; height: 44px; margin: 0; }
+  .stage .hud .tray {
+    position: absolute; left: calc(64px + var(--sa-l)); right: calc(64px + var(--sa-r)); top: calc(12px + var(--sa-t));
+    margin: 0; padding: 0; max-width: none; width: auto; height: 44px; display: flex; align-items: center; gap: 8px; justify-content: flex-start;
+  }
+  .stage .hud .tray-list { padding: 0; gap: 6px; min-width: 0; }
+  .stage .hud .t-sel { width: 40px; height: 40px; }
+  .stage .hud .add-btn { width: 44px; height: 44px; flex: none; background: rgba(14, 16, 20, 0.45); border-color: rgba(255, 255, 255, 0.3); color: rgba(255, 255, 255, 0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+  .stage .hud .ref-tab {
+    position: absolute; right: calc(12px + var(--sa-r)); top: calc(12px + var(--sa-t)); left: auto; bottom: auto;
+    width: 44px; height: 44px; padding: 0; gap: 0; font-size: 0; justify-content: center; margin: 0;
+  }
+
+  /* 위 2줄: 옆으로 밀어 보는 버튼 줄 */
+  .stage .hud .top-right {
+    position: absolute; left: 0; right: 0; top: calc(66px + var(--sa-t));
+    display: flex; flex-wrap: nowrap; justify-content: flex-start; align-items: center; gap: 8px;
+    max-width: none; margin: 0; padding: 0 calc(12px + var(--sa-r)) 2px calc(12px + var(--sa-l));
+    overflow-x: auto; overflow-y: hidden; scrollbar-width: none; overscroll-behavior-x: contain; touch-action: pan-x;
+  }
+  .stage .hud .top-right::-webkit-scrollbar { display: none; }
+  .stage .hud .top-right > * { flex: none; align-self: center; order: 2; }
+  .stage .hud .top-right > .lab-card { order: 0; height: 44px; box-sizing: border-box; padding: 0 6px 0 14px; display: flex; align-items: center; gap: 8px; }
+  .stage .hud .top-right > .shot-btn { order: 1; }
+  .stage .hud .top-right > .layer-card { order: 9; }
+  .stage .hud .top-right > .reset-btn { height: 44px; width: 44px; padding: 0; gap: 0; font-size: 0; justify-content: center; }
+  .stage .hud .top-right > .rec-btn #recTime { min-width: 0; }
+  .stage .hud .top-right > .rec-btn .rec-dot { width: 14px; height: 14px; }
+  .stage .hud .top-right > .rec-btn.rec-on { width: auto; padding: 0 14px; gap: 8px; font-size: 13px; }   /* 녹화 중에는 시간 보임 */
+  .stage .hud .top-right > .rec-btn.rec-on #recTime { min-width: 40px; }
+  /* Lab mode 스위치: 사진 위에서도 읽히게 다른 버튼처럼 어두운 알약 위에 (배경 밝기와 상관없이 흰색) */
+  .stage .hud .top-right > .lab-card {
+    background: rgba(14, 16, 20, 0.45) !important; border-radius: 999px; color: rgba(255, 255, 255, 0.94); text-shadow: none;
+    backdrop-filter: blur(20px) !important; -webkit-backdrop-filter: blur(20px) !important;
+    --txt: rgba(255, 255, 255, 0.94); --txt-dim: rgba(255, 255, 255, 0.5); --line: rgba(255, 255, 255, 0.13);
+  }
+  .stage .hud .top-right > .lab-card .c-label { color: rgba(255, 255, 255, 0.94); }
+  .stage[data-ink="dark"] .hud .top-right > .lab-card .switch i { background: rgba(255, 255, 255, 0.85); }  .stage .hud .top-right > .shot-btn { width: auto; padding: 0 16px 0 13px; gap: 7px; font-size: 13px; }   /* 셔터는 글자도 */
+
+  /* 말풍선 · 알림 · 기다림 안내 */
+  .stage .hud .card.panel.status {
+    position: absolute; left: calc(12px + var(--sa-l)); right: calc(12px + var(--sa-r)); top: calc(122px + var(--sa-t)); bottom: auto;
+    width: auto; max-width: none; margin: 0;
+  }
+  .stage .hud .st-title { white-space: normal; font-size: 14.5px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+  .stage .hud .notice { top: calc(122px + var(--sa-t)); max-width: calc(100% - 24px); white-space: normal; text-align: center; z-index: 8; }
+  .stage .hud .wait-note { left: calc(12px + var(--sa-l)); right: calc(12px + var(--sa-r)); top: calc(122px + var(--sa-t)); }
+
+  /* 사진 고르기 패널: 화면 가운데에 크게 */
+  .stage .hud .gallery {
+    position: fixed; left: calc(12px + var(--sa-l)); right: calc(12px + var(--sa-r)); top: calc(66px + var(--sa-t)); bottom: calc(12px + var(--sa-b));
+    transform: none; width: auto; max-width: none; max-height: none; z-index: 12;
+  }
+  .stage .hud .g-close { width: 36px; height: 36px; font-size: 18px; line-height: 36px; }
+
+  /* 아래 서랍 */
+  .stage .hud .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 6;
+    display: flex; flex-direction: column; gap: 10px;
+    max-height: 62vh; max-height: 62dvh; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
+    padding: 0 calc(12px + var(--sa-r)) calc(12px + var(--sa-b)) calc(12px + var(--sa-l));
+    background: linear-gradient(180deg, rgba(10, 11, 14, 0.62), rgba(10, 11, 14, 0.8));
+    backdrop-filter: blur(18px) saturate(120%); -webkit-backdrop-filter: blur(18px) saturate(120%);
+    border-top: 1px solid rgba(255, 255, 255, 0.12); border-radius: 22px 22px 0 0;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
+    pointer-events: auto;
+  }
+  .stage .hud .sheet::-webkit-scrollbar { display: none; }
+  .stage .hud .sheet-handle {
+    order: 0; position: sticky; top: 0; z-index: 2; flex: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    height: 40px; margin: 0 calc(-12px - var(--sa-r)) 0 calc(-12px - var(--sa-l)); padding: 0; border: 0; border-radius: 22px 22px 0 0;
+    background: rgba(10, 11, 14, 0.55); color: rgba(255, 255, 255, 0.82); cursor: pointer; touch-action: none;
+    font: 400 11px/1 "DM Mono", ui-monospace, monospace; letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  .stage .hud .sheet-handle i { width: 38px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.45); }
+  .stage .hud .sheet[data-open="true"] .sheet-handle span::after { content: " ▾"; }
+  .stage .hud .sheet[data-open="false"] .sheet-handle span::after { content: " ▴"; }
+
+  .stage .hud .sheet .modebar { order: 1; position: static; width: auto; margin: 0; align-self: stretch; flex: none; overflow-x: auto; scrollbar-width: none; justify-content: space-between; gap: 2px; padding: 6px 8px; }
+  .stage .hud .sheet .modebar::-webkit-scrollbar { display: none; }
+  .stage .hud .sheet .m-tile { flex: none; min-width: 46px; }
+  .stage .hud .sheet .m-pic { width: 34px; height: 34px; }
+  .stage .hud .sheet .m-name { font-size: 10px; }
+  .stage .hud .sheet .m-tile b { font-size: 11.5px; }
+
+  .stage .hud .sheet .col-right, .stage .hud .sheet .col-left {
+    position: static; margin: 0; width: auto; align-self: stretch; flex: none;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; align-items: start;
+  }
+  .stage .hud .sheet .col-right { order: 2; }
+  .stage .hud .sheet .col-left { order: 3; }
+  .stage .hud .sheet[data-open="false"] .col-right, .stage .hud .sheet[data-open="false"] .col-left { display: none; }
+  .stage .hud .sheet .col-right [hidden], .stage .hud .sheet .col-left [hidden] { display: none; }
+
+  /* 오프닝: 제목이 화면 폭에 맞게 */
+  .intro-title { font-size: clamp(30px, 10vw, 64px); }
+}
+/* 세로로 든 휴대폰: 사진 고리를 작은 카드 + 더 내려다보는 각도로 → 제목 둘레에 세로로 긴 타원 (카드가 제목을 덜 가림) */
+@media (max-width: 700px) and (orientation: portrait) {
+  .ring { --R: 37vw; --tilt: -64deg; }
+  .r-card { left: -42px; top: -31px; width: 84px; height: 62px; }
+  .intro-title { font-size: clamp(26px, 8vw, 56px); }
+}
+
+/* 아주 낮은 화면(가로로 든 휴대폰): 버튼 줄을 위 1줄 오른쪽으로 올리고, 말풍선은 그 아래 왼쪽에 좁게 */
+@media (max-width: 1000px) and (max-height: 500px) {
+  .stage .hud .tray { right: auto; max-width: 40%; }
+  .stage .hud .top-right { left: 45%; right: calc(64px + var(--sa-r)); top: calc(12px + var(--sa-t)); padding-left: 0; padding-right: 0; }
+  .stage .hud .sheet-handle { height: 30px; }
+  .stage .hud .sheet .modebar { padding: 4px 8px; }
+  .stage .hud .sheet .m-pic { width: 24px; height: 24px; }
+  .stage .hud .card.panel.status, .stage .hud .notice, .stage .hud .wait-note { top: calc(66px + var(--sa-t)); right: auto; max-width: min(420px, 60%); }
+  .stage .hud .sheet { max-height: 72vh; max-height: 72dvh; }
+}
