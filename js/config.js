@@ -6,6 +6,15 @@
 (function (DT) {
   'use strict';
 
+  /*
+   * 휴대폰·태블릿(터치 화면) = 메모리 절약 모드 — 아이폰 Safari·카카오톡 브라우저는 메모리 한도가 낮아 넘으면 탭이 다시 시작됨(처음 화면으로 튕김)
+   *  - 작품 해상도: 격자 low (출력 1280×800, 데스크톱 1920×1200)
+   *  - 효과 캔버스(미생물·기포·부식·사막·점균·이끼·성에 글자): 화면 배율 1 까지만 (데스크톱 1.5)
+   *  URL ?quality=medium|high 를 주면 터치 화면이어도 그 값
+   */
+  DT.LOWMEM = !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches);
+  DT.dprCap = DT.LOWMEM ? 1 : 9;
+
   DT.CONFIG = {
     defaultText: '',             // 첫 화면은 비어 있는 검은 우주
     maxTextLength: 24,

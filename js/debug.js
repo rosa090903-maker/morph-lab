@@ -25,12 +25,25 @@
   var t0 = Date.now();
   var stamp = function () { return ((Date.now() - t0) / 1000).toFixed(1) + 's '; };
 
-  // 지난번에 사진을 고른 직후 페이지가 다시 시작됐는지
+  // 지난번 페이지가 스스로 닫히지 않고 갑자기 다시 시작됐는지 (= 탭이 메모리 부족으로 죽음)
+  //  살아 있는 동안 1초마다 심장박동 + 마지막 조작을 sessionStorage 에 적고, 정상으로 떠날 때(pagehide)는 'clean' 표시
+  var HB = 'polar-debug-hb', LAST = 'polar-debug-last', CLEAN = 'polar-debug-clean';
   try {
-    var prev = sessionStorage.getItem(KEY);
-    if (prev && Date.now() - +prev < 60000) log('!! The page RESTARTED ' + Math.round((Date.now() - +prev) / 1000) + 's after picking a sample — the browser tab most likely ran out of memory and crashed.');
-    sessionStorage.removeItem(KEY);
+    var hb = +sessionStorage.getItem(HB), clean = sessionStorage.getItem(CLEAN), last = sessionStorage.getItem(LAST);
+    if (hb && !clean && Date.now() - hb < 120000) log('!! The page CRASHED and restarted (out of memory). Last thing done before it: ' + (last || 'nothing recorded') + '.');
+    sessionStorage.removeItem(CLEAN); sessionStorage.removeItem(KEY);
   } catch (e) { /* */ }
+  var beat = function () { try { sessionStorage.setItem(HB, String(Date.now())); } catch (e) { /* */ } };
+  beat(); setInterval(beat, 1000);
+  window.addEventListener('pagehide', function () { try { sessionStorage.setItem(CLEAN, '1'); } catch (e) { /* */ } });
+  var lastDone = function (s) { try { sessionStorage.setItem(LAST, s + ' (at ' + ((Date.now() - t0) / 1000).toFixed(0) + 's)'); } catch (e) { /* */ } };
+  // 조절 카드·버튼을 만질 때마다 '마지막 조작'으로 적어 둠
+  document.addEventListener('pointerdown', function (e) {
+    var t = e.target, el = t && t.closest && t.closest('[aria-label], button, .card');
+    if (!el) return;
+    var name = el.getAttribute('aria-label') || (el.textContent || '').trim().slice(0, 24) || el.id || el.className;
+    lastDone('touched "' + name + '"');
+  }, true);
 
   log('UA: ' + navigator.userAgent);
   log('screen ' + screen.width + 'x' + screen.height + ' · window ' + innerWidth + 'x' + innerHeight + ' · dpr ' + devicePixelRatio + (navigator.deviceMemory ? ' · RAM ~' + navigator.deviceMemory + 'GB' : ''));
@@ -63,7 +76,11 @@
     try { sessionStorage.setItem(KEY, String(Date.now())); } catch (err) { /* */ }
     log(stamp() + 'picked a sample' + (b.disabled ? ' (disabled — still loading)' : ''));
     var stage = document.getElementById('stage');
-    setTimeout(function () { log(stamp() + '+1.5s · screen: ' + (stage && stage.dataset.intro === 'off' ? 'MAIN (ok)' : 'still OPENING') + ' · photos: ' + (window.__DIFFUSE__ ? window.__DIFFUSE__.photoIds.length : '?')); }, 1500);
+    setTimeout(function () {
+      var px = 0; Array.prototype.forEach.call(document.querySelectorAll('canvas'), function (c) { px += c.width * c.height; });
+      log(stamp() + '+1.5s · screen: ' + (stage && stage.dataset.intro === 'off' ? 'MAIN (ok)' : 'still OPENING') + ' · photos: ' + (window.__DIFFUSE__ ? window.__DIFFUSE__.photoIds.length : '?') +
+        ' · canvases ' + Math.round(px * 4 / 1048576) + 'MB · low-memory mode ' + (window.DT && window.DT.LOWMEM ? 'ON' : 'off'));
+    }, 1500);
     setTimeout(function () { try { sessionStorage.removeItem(KEY); } catch (err) { /* */ } log(stamp() + '+8s · still alive' + (window.__DIFFUSE__ ? ' · photos: ' + window.__DIFFUSE__.photoIds.length : '')); }, 8000);
   }, true);
   window.addEventListener('load', function () {

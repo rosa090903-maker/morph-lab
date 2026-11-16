@@ -28,7 +28,7 @@
     const cache = new Map();   // key → { mask, rect, dots: Float32Array [x, y, r, th, ph, edge] }
 
     function resize() {
-      dpr = Math.min(F.maxDpr, window.devicePixelRatio || 1);
+      dpr = Math.min(F.maxDpr, DT.dprCap || 9, window.devicePixelRatio || 1);
       W = frame.clientWidth || 1; H = frame.clientHeight || 1;
       const w = Math.round(W * dpr), h = Math.round(H * dpr);
       if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }

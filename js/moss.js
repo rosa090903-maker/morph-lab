@@ -182,7 +182,7 @@
     const haloImg = document.createElement('canvas'), haloTmp = document.createElement('canvas');
 
     function resize() {
-      dpr = Math.min(M.maxDpr, window.devicePixelRatio || 1);
+      dpr = Math.min(M.maxDpr, DT.dprCap || 9, window.devicePixelRatio || 1);
       const w0 = Wc, h0 = Hc;
       Wc = frame.clientWidth || 1; Hc = frame.clientHeight || 1;
       const w = Math.round(Wc * dpr), h = Math.round(Hc * dpr);

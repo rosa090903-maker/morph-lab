@@ -177,7 +177,7 @@
     let side = new Uint8Array(1), sideList = new Int32Array(0), sideTotal = 0, sideCov = 0, sideT = 0, sideDone = false, sideRect = null;
 
     function resize() {
-      dpr = Math.min(S.maxDpr, window.devicePixelRatio || 1);
+      dpr = Math.min(S.maxDpr, DT.dprCap || 9, window.devicePixelRatio || 1);
       const w0 = Wc, h0 = Hc;
       Wc = frame.clientWidth || 1; Hc = frame.clientHeight || 1;
       const w = Math.round(Wc * dpr), h = Math.round(Hc * dpr);

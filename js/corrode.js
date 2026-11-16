@@ -99,7 +99,7 @@
     }
 
     function resize() {
-      dpr = Math.min(C.maxDpr, window.devicePixelRatio || 1);
+      dpr = Math.min(C.maxDpr, DT.dprCap || 9, window.devicePixelRatio || 1);
       Wc = frame.clientWidth || 1; Hc = frame.clientHeight || 1;
       const w = Math.round(Wc * dpr), h = Math.round(Hc * dpr);
       if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; drawn = ''; }

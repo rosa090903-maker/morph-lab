@@ -152,7 +152,7 @@
   function setupEngine() {
     let canvas = $('art');
     let reason = null;
-    const q = qs.get('quality');
+    const q = qs.get('quality') || (DT.LOWMEM ? 'low' : null);   // 터치 화면: 메모리 절약 (js/config.js DT.LOWMEM)
     if (qs.get('mode') === 'cpu') {
       reason = 'CPU mode was requested in the URL (mode=cpu)';
     } else {
