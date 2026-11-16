@@ -202,7 +202,9 @@
       const idle = window.requestIdleCallback || ((f) => setTimeout(f, 1500));
       const SEG_EVENTS = ['pointerdown', 'keydown', 'dragenter'];
       const startSeg = () => { SEG_EVENTS.forEach((t) => window.removeEventListener(t, startSeg, true)); idle(() => DT.preloadSegment(), { timeout: 1000 }); };
-      SEG_EVENTS.forEach((t) => window.addEventListener(t, startSeg, true));
+      //  휴대폰·태블릿(터치)에서는 미리 받지 않음 — 기본 샘플은 누끼가 이미 있어 모델이 필요 없고, 모바일 데이터·메모리(~90MB)를 아낌.
+      //  직접 사진을 올릴 때만 그때 받음 (DT.segmentSubject 가 알아서 불러옴)
+      if (!TOUCH) SEG_EVENTS.forEach((t) => window.addEventListener(t, startSeg, true));
     } catch (e) {
       console.warn('[POLAR] photo ice unavailable:', e);
       showNotice('Photo freezing needs WebGL2 with floating-point render targets: ' + e.message);

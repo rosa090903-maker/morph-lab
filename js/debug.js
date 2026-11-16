@@ -50,6 +50,12 @@
   var warn = console.warn;
   console.warn = function () { try { log(stamp() + 'warn ' + Array.prototype.map.call(arguments, function (a) { return a && a.message ? a.message : String(a); }).join(' ')); } catch (e) { /* */ } return warn.apply(console, arguments); };
 
+  // 오프닝 화면에서 손가락이 실제로 무엇을 눌렀는지
+  document.addEventListener('pointerup', function (e) {
+    var intro = document.getElementById('intro');
+    if (!intro || intro.hidden || !intro.contains(e.target)) return;
+    var t = e.target; log(stamp() + 'tap on ' + (t.id ? '#' + t.id : '.' + String(t.className || t.tagName).split(' ')[0]) + ' (' + Math.round(e.clientX) + ',' + Math.round(e.clientY) + ')');
+  }, true);
   // 사진 고르기 → 다음 화면까지 단계별로
   document.addEventListener('click', function (e) {
     var b = e.target && e.target.closest && e.target.closest('.r-pick, .g-pick');

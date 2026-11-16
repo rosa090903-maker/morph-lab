@@ -120,6 +120,27 @@
       opts.ring.style.setProperty('--spin', spin.toFixed(3) + 'deg');
       raf = requestAnimationFrame(tick);
     }
+    /*
+     * 아이폰(WebKit)은 3D 로 돌린 카드(preserve-3d)를 누른 자리를 잘못 찾아 카드의 click 이 오지 않을 때가 있음
+     *  → 오프닝 화면 어디를 눌러도 여기서 받아, 카드를 빗나갔으면 화면에 보이는 카드 위치(getBoundingClientRect)로 직접 찾음
+     *  겹치면 더 크게 보이는(= 앞쪽) 카드. 제목을 누른 것은 그대로(사진 올리기)
+     */
+    function cardAt(x, y) {
+      let best = null, bestArea = 0;
+      for (const b of opts.ring.querySelectorAll('.r-pick')) {
+        const r = b.getBoundingClientRect();
+        if (x < r.left || x > r.right || y < r.top || y > r.bottom || r.width < 6) continue;
+        const a = r.width * r.height;
+        if (a > bestArea) { bestArea = a; best = b; }
+      }
+      return best;
+    }
+    opts.intro.addEventListener('click', (e) => {
+      if (opts.intro.hidden || opts.intro.classList.contains('leaving')) return;
+      if (e.target.closest && (e.target.closest('.r-pick') || e.target.closest('.r-del') || e.target.closest('.intro-title'))) return;   // 제대로 맞았으면 원래대로
+      const b = cardAt(e.clientX, e.clientY);
+      if (b && !b.disabled) { if (window.__polarDebug) window.__polarDebug('tap missed the 3D card → picked by position'); b.click(); }
+    });
     opts.ring.addEventListener('pointerover', (e) => { if (e.target.closest('.r-card')) hold = true; });
     opts.ring.addEventListener('pointerout', (e) => { if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest('.r-card')) hold = false; });
 
