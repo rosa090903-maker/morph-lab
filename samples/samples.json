@@ -1,0 +1,30 @@
+[
+    {
+        "image":  "01_lotus-leaves.jpg",
+        "mask":  "01_lotus-leaves.mask.png"
+    },
+    {
+        "image":  "02_ink-plant.jpg",
+        "mask":  "02_ink-plant.mask.png"
+    },
+    {
+        "image":  "03_white-orchid.jpg",
+        "mask":  "03_white-orchid.mask.png"
+    },
+    {
+        "image":  "04_pink-flower.jpg",
+        "mask":  "04_pink-flower.mask.png"
+    },
+    {
+        "image":  "05_spiral-leaf.jpg",
+        "mask":  "05_spiral-leaf.mask.png"
+    },
+    {
+        "image":  "06_red-sea-fan.jpg",
+        "mask":  "06_red-sea-fan.mask.png"
+    },
+    {
+        "image":  "07_blue-coral.jpg",
+        "mask":  "07_blue-coral.mask.png"
+    }
+]

@@ -1,0 +1,139 @@
+/*
+ * References 패널 (js/refpanel.js) — 지금 화면과 비슷한 시각 레퍼런스
+ *  탭: 아래 줄 왼쪽의 알약 유리 버튼 · 패널: 왼쪽 세로 전체를 덮는 조금 더 어두운 유리 카드
+ */
+
+/* 탭 — 빛나는 점 + 'References'
+ *  원래 3열이었으나 1280×720 에서 아래 가운데 모드 막대(.modebar)와 겹쳐 2열(왼쪽 아래 열 바로 오른쪽)로 옮김 */
+.hud .ref-tab {
+  grid-column: 2; grid-row: 4; justify-self: start; align-self: end;
+  display: inline-flex; align-items: center; gap: 9px; height: 40px; padding: 0 18px 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 999px; cursor: pointer;
+  background: rgba(14, 16, 20, 0.45); color: rgba(255, 255, 255, 0.94);
+  font: 300 13.5px/1 "Helvetica Neue", "Segoe UI", Arial, sans-serif; letter-spacing: 0.02em; text-shadow: none;
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  transition: background 0.25s, border-color 0.25s;
+}
+/* 중간 폭(1024 노트북 등): 아래 모드 막대를 덮지 않게 빛나는 점만 (title · 읽기 이름은 그대로) */
+@media (min-width: 1001px) and (max-width: 1279px) { .hud .ref-tab { grid-row: 3; font-size: 0; gap: 0; width: 40px; padding: 0; justify-content: center; } }
+.hud .ref-tab:hover, .hud .ref-tab[aria-expanded="true"] { background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.3); }
+.hud .ref-tab:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.6); outline-offset: 2px; }
+.ref-dot {
+  flex: none; width: 10px; height: 10px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff 0%, #8fd8ff 45%, #9a6bff 100%);
+  box-shadow: 0 0 8px rgba(143, 216, 255, 0.85), 0 0 16px rgba(154, 107, 255, 0.5);
+  animation: ref-glow 2.8s ease-in-out infinite;
+}
+@keyframes ref-glow { 50% { box-shadow: 0 0 4px rgba(143, 216, 255, 0.5), 0 0 9px rgba(154, 107, 255, 0.3); } }
+.stage[data-lab="on"] .hud .ref-tab { background: linear-gradient(180deg, #031a5c, #0a3fae 70%, #2a7ae8); border-color: rgba(255, 255, 255, 0.2); }
+
+/* 패널 — 격자 1~3열 · 1~4줄 영역의 왼쪽에 붙고 위아래 전체. absolute 라 격자 크기에 영향 없음 */
+.stage .hud .card.ref-panel {
+  --txt: rgba(255, 255, 255, 0.94); --txt-dim: rgba(255, 255, 255, 0.52); --line: rgba(255, 255, 255, 0.13);
+  --glass: rgba(255, 255, 255, 0.06); --glass-hi: rgba(255, 255, 255, 0.12);
+  grid-column: 1 / 4; grid-row: 1 / 5; justify-self: start;
+  position: absolute; top: 0; bottom: 0; left: 0; width: 360px; max-width: 100%; z-index: 4;
+  display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 12px; border-radius: 24px;
+  color: var(--txt); text-shadow: none; user-select: text; -webkit-user-select: text;
+  font: 400 12.5px/1.4 "Inter Tight", "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+  background: linear-gradient(170deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 40%), rgba(10, 12, 16, 0.62) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 20px 50px rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(26px) saturate(130%) !important; -webkit-backdrop-filter: blur(26px) saturate(130%) !important;
+}
+.stage .hud .card.ref-panel[hidden] { display: none; }
+.stage[data-lab="on"] .hud .card.ref-panel {
+  background: var(--lab-bg) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+.ref-panel .c-head { align-items: center; }
+.ref-panel .c-label { font-size: 14px; }
+.ref-panel .c-hint { margin-left: auto; padding: 2px 8px; border-radius: 999px; background: var(--glass); }
+.ref-close {
+  width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; cursor: pointer;
+  background: var(--glass); color: var(--txt); font: 300 18px/1 Arial, sans-serif;
+}
+.ref-close:hover { background: var(--glass-hi); }
+
+/* 지금 화면 썸네일 + 상태 칩 */
+.ref-now { display: flex; gap: 12px; align-items: flex-start; }
+.ref-thumb { flex: none; width: 112px; height: 70px; border-radius: 10px; background: #000; box-shadow: inset 0 0 0 1px var(--line); }
+.ref-chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; padding: 0; list-style: none; min-width: 0; }
+.ref-chip { padding: 3px 8px; border-radius: 999px; background: var(--glass); border: 1px solid var(--line); color: var(--txt-dim); font-size: 10.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ref-chip.on { color: #fff; background: rgba(255, 255, 255, 0.18); border-color: rgba(255, 255, 255, 0.45); box-shadow: 0 0 10px rgba(255, 255, 255, 0.2); }
+.ref-chip.mix { color: #bfefff; border-color: rgba(120, 220, 255, 0.45); }
+
+/* 큰 버튼 */
+.ref-find {
+  flex: none; height: 42px; border: 0; border-radius: 14px; cursor: pointer;
+  background: linear-gradient(180deg, #ffffff, #dfe4ec); color: #0b0d12;
+  font: 500 13.5px/1 "Inter Tight", "Helvetica Neue", "Segoe UI", Arial, sans-serif; letter-spacing: 0.01em;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  transition: transform 0.15s, opacity 0.2s;
+}
+.ref-find:hover { transform: translateY(-1px); }
+.ref-find:disabled { opacity: 0.6; cursor: progress; transform: none; }
+.ref-find:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.7); outline-offset: 2px; }
+
+/* 결과 — 혼자 스크롤 */
+.ref-results { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin-right: -8px; padding-right: 8px; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.25) transparent; }
+.ref-sub { margin: 16px 0 8px; font-size: 10px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--txt-dim); }
+.ref-sub:first-child { margin-top: 2px; }
+.ref-desc { margin: 0; font-size: 13px; line-height: 1.55; }
+.ref-note { margin: 0 0 4px; padding: 8px 10px; border-radius: 10px; background: rgba(255, 140, 90, 0.14); border: 1px solid rgba(255, 160, 110, 0.3); font-size: 11.5px; }
+.ref-wait { grid-column: 1 / -1; margin: 0; color: var(--txt-dim); font-size: 11.5px; }
+.ref-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.ref-img { display: block; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: var(--glass); }
+.ref-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s; }
+.ref-img:hover img { transform: scale(1.05); }
+.ref-queries, .ref-artists { margin: 0; padding: 0; list-style: none; }
+.ref-queries li { padding: 7px 0; border-top: 1px solid var(--line); }
+.ref-queries li:first-child { border-top: 0; padding-top: 0; }
+.ref-q { display: block; margin-bottom: 5px; font-size: 12.5px; }
+.ref-links { display: flex; flex-wrap: wrap; gap: 4px; }
+.ref-link { padding: 2px 8px; border-radius: 999px; background: var(--glass); border: 1px solid var(--line); color: var(--txt-dim); font-size: 10.5px; text-decoration: none; }
+.ref-link:hover { color: #fff; background: var(--glass-hi); }
+.ref-artists li { padding: 6px 0; border-top: 1px solid var(--line); }
+.ref-artists li:first-child { border-top: 0; padding-top: 0; }
+.ref-artist { color: var(--txt); text-decoration: none; border-bottom: 1px solid rgba(255, 255, 255, 0.3); }
+.ref-artist:hover { border-bottom-color: #fff; }
+.ref-work { color: var(--txt-dim); }
+.ref-why { margin: 3px 0 0; color: var(--txt-dim); font-size: 11.5px; line-height: 1.45; }
+
+/* 비슷한 디자인 이펙트 — 이름 · 유사도 막대 · 도구 · 만드는 법 · 이유 · 링크 */
+.ref-fx .ref-sub { display: flex; align-items: center; gap: 6px; }
+.ref-live { width: 6px; height: 6px; border-radius: 50%; background: #7dffb0; box-shadow: 0 0 6px #7dffb0; animation: ref-glow 2.8s ease-in-out infinite; }
+.ref-fx-list { margin: 0; padding: 0; list-style: none; }
+.ref-fx-item { padding: 9px 0; border-top: 1px solid var(--line); }
+.ref-fx-item:first-child { border-top: 0; padding-top: 0; }
+.ref-fx-top { display: flex; align-items: baseline; gap: 8px; }
+.ref-fx-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; }
+.ref-fx-pct { flex: none; font-size: 12px; color: var(--txt-dim); font-variant-numeric: tabular-nums; }
+.ref-fx-bar { height: 3px; margin: 5px 0 6px; border-radius: 2px; background: var(--glass); overflow: hidden; }
+.ref-fx-bar i { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, #8fd8ff, #9a6bff); transition: width 0.5s; }
+.stage[data-lab="on"] .ref-fx-bar i { background: linear-gradient(90deg, #fff, #d6e4ff); }
+.ref-fx-tool { margin: 0 0 3px; font: 400 10.5px/1.4 "DM Mono", Consolas, monospace; color: var(--txt-dim); }
+.ref-fx-how { margin: 0 0 3px; font-size: 12px; line-height: 1.45; }
+.ref-fx-why { margin: 0 0 6px; font-size: 11px; line-height: 1.4; color: var(--txt-dim); }
+.ref-fx-why::before { content: '≈ '; }
+.ref-out:not(:empty) { margin-top: 6px; border-top: 1px solid var(--line); }
+
+/* 키 입력 (접힘) */
+.ref-key { flex: none; border-top: 1px solid var(--line); padding-top: 8px; font-size: 11.5px; }
+.ref-key summary { cursor: pointer; color: var(--txt-dim); list-style-position: inside; }
+.ref-key summary:hover { color: var(--txt); }
+.ref-key-row { display: flex; gap: 6px; margin-top: 8px; }
+.ref-key-in { flex: 1; min-width: 0; height: 30px; padding: 0 10px; border-radius: 9px; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.3); color: var(--txt); font: 400 12px/1 "DM Mono", Consolas, monospace; }
+.ref-key-in:focus { outline: none; border-color: rgba(255, 255, 255, 0.45); }
+.ref-key-save { height: 30px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--glass-hi); color: var(--txt); cursor: pointer; font: inherit; }
+.ref-key-save:hover { background: rgba(255, 255, 255, 0.2); }
+.ref-key-rem { display: flex; align-items: center; gap: 6px; margin-top: 7px; color: var(--txt-dim); cursor: pointer; }
+.ref-key-note { margin: 6px 0 2px; color: var(--txt-dim); font-size: 10.5px; line-height: 1.4; }
+
+/* 좁은 화면: 패널이 화면을 덮음 */
+@media (max-width: 1000px) {
+  .stage .hud .card.ref-panel { position: fixed; inset: 12px; width: auto; max-width: none; z-index: 20; }
+  .hud .ref-tab { align-self: flex-start; flex: none; }
+}
+@media (prefers-reduced-motion: reduce) { .ref-dot { animation: none; } }

@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Laboratory</title>
+  <meta name="description" content="Drop a photo, then lower the temperature to −10 °C or below to freeze it">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23030407'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23ffffff' stroke-width='2'/%3E%3C/svg%3E">
+  <!-- 오프닝 제목 폰트 (CLOU 레퍼런스와 비슷한 둥근 그로테스크) — 오프라인이면 Helvetica Neue / Segoe UI 로 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Inter+Tight:wght@300;400&family=Noto+Serif+KR:wght@200..900&display=swap">
+  <!-- Type 카드 표본 글꼴 S-02 (Noto Serif KR) 도 여기서 받음 — 오프라인이면 바탕체로. 나머지 표본 글꼴은 fonts/ 폴더 -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/refpanel.css">
+  <!-- file:// 로 열리면 로컬 서버(start.cmd, localhost:5174)로 옮겨 감 — 없으면 작은 안내 (js/serve.js) -->
+  <script src="js/serve.js"></script>
+</head>
+<body>
+  <!-- 전체 화면 작품 (조절 패널 없음) -->
+  <main class="stage" id="stage" aria-label="Artwork canvas">
+    <div class="frame" id="frame">
+      <div class="layers" id="layers">
+        <canvas id="art" role="img" aria-label="Dropped photo; frost grows on it below −10 °C"></canvas>
+        <canvas id="stars" aria-hidden="true"></canvas>
+        <!-- 생장 모드(Vitality 켬) 배경: 연한 초록 + 그레인 (사진·미생물 아래) -->
+        <div class="bio-bg" id="bioBg" aria-hidden="true"><i></i></div>
+        <!-- 사막화 배경: 흰색 (사막화가 보이는 만큼 나타남) — js/desert.js -->
+        <canvas id="desertBg" aria-hidden="true"></canvas>
+        <!-- Prism 배경색: 배경 위에만 덮는 색 막 (어두운 배경 = screen, 밝은 배경 = multiply) — 사진·효과 아래 -->
+        <div class="prism-bg" id="prismBg" aria-hidden="true" hidden></div>
+        <!-- 사진 → 기온에 따라 파란/흰 점으로 분해·결빙 — js/photoice.js -->
+        <canvas id="photo" aria-hidden="true"></canvas>
+        <!-- 효과 레이어 묶음 — Prism 효과색 filter 를 캔버스마다가 아니라 여기 한 번만 검 (js/app.js applyPrism) -->
+        <div class="fx-layer" id="fxLayer">
+        <!-- 성에 글자 ('성에' 모드에서 오른쪽 클릭 → 친 글자가 얼음 점으로) — js/frosttype.js -->
+        <canvas id="frosttype" aria-hidden="true"></canvas>
+        <!-- 미생물 (+10 °C 위, 클릭한 자리에서 자람) — js/microbe.js -->
+        <canvas id="microbe" aria-hidden="true"></canvas>
+        <!-- 기포 (Vitality 끔 + 습도·산소가 높을 때) — js/bubble.js -->
+        <canvas id="bubble" aria-hidden="true"></canvas>
+        <!-- 부식 (Vitality 끔 + 기온·습도·산소 모두 높을 때) — js/corrode.js -->
+        <canvas id="corrode" aria-hidden="true"></canvas>
+        <!-- 사막화 (Vitality 끔 + 습도 낮음 + 기온 높음 + 산소 낮음) — js/desert.js -->
+        <canvas id="desert" aria-hidden="true"></canvas>
+        <!-- 점균 (Vitality 켬 + 기온·습도 높음 + 산소 낮음 — 파란 배경 위 노란 원형질 그물) — js/slime.js -->
+        <canvas id="slime" aria-hidden="true"></canvas>
+        <!-- 이끼 (Vitality 켬 + 습도 아주 높음 + 온화 + 산소 보통 — 짙은 흙빛 배경 위 초록 이끼 방석) — js/moss.js -->
+        <canvas id="moss" aria-hidden="true"></canvas>
+        </div>
+      </div>
+      <!-- 콜라주 편집: 선택한 사진의 테두리 + 모서리 크기 조절 손잡이 (얼기 전에만) -->
+      <div class="sel-box" id="selBox" hidden><i class="sel-h" data-c="tl"></i><i class="sel-h" data-c="tr"></i><i class="sel-h" data-c="bl"></i><i class="sel-h" data-c="br"></i></div>
+    </div>
+    <!-- 시작은 검은 화면. 사진을 끌어다 놓으면 화면에 크게 뜸 (js/photo.js) -->
+    <!-- 오른쪽 아래: (차가운 환경에서) 기온 다이얼 -->
+    <div class="ctrl" id="ctrl">
+      <!-- 습도 다이얼: 시계 방향 = 더 습하게 (기온과 함께 곰팡이 증식·건조·응결·성에를 결정 — js/growth.js) -->
+      <div class="dial" id="humCtl" hidden role="slider" tabindex="0" aria-label="Humidity dial (turn to adjust)" title="Turn to set relative humidity · clockwise = more humid">
+        <svg viewBox="0 0 72 72" aria-hidden="true">
+          <circle class="d-face" cx="36" cy="36" r="27"/>
+          <path class="d-track" id="humTrack"/>
+          <path class="d-value" id="humValue"/>
+          <circle class="d-knob" id="humKnob" r="2.8"/>
+        </svg>
+        <output id="humVal" for="humCtl"></output>
+      </div>
+      <!-- 기온 다이얼: 시계 방향 = 따뜻하게, 반시계 = 차갑게. 작은 눈금 = 녹는점 -->
+      <div class="dial" id="tempCtl" hidden role="slider" tabindex="0" aria-label="Temperature dial (turn to adjust)" title="Turn to set temperature · clockwise = warmer">
+        <svg viewBox="0 0 72 72" aria-hidden="true">
+          <circle class="d-face" cx="36" cy="36" r="27"/>
+          <path class="d-track" id="dialTrack"/>
+          <path class="d-value" id="dialValue"/>
+          <line class="d-melt" id="dialMelt"/>
+          <circle class="d-knob" id="dialKnob" r="2.8"/>
+        </svg>
+        <output id="tempVal" for="tempCtl"></output>
+      </div>
+    </div>
+    <!--
+      유리 대시보드 (js/app.js setupDashboard) — 화면 위에 카드 격자로 배치
+        위 줄   : 왼쪽 = 사진 목록, 오른쪽 = 상태 카드(한 줄)
+        오른쪽 열: 기온 · 습도 카드
+        아래 줄 : 요약 칩 + 시간 · 색 · 재생 카드 + 셔터(사진 찍기)
+    -->
+    <div class="hud" id="hud">
+      <!-- 왼쪽 위: 사진 목록(썸네일) + 사진 추가('+' = 오프닝 사진 중에서 고르기) — 사진이 없어도 늘 보임 -->
+      <div class="tray card" id="tray">
+        <ul class="tray-list" id="trayList" aria-label="Photos in the collage"></ul>
+        <button type="button" class="add-btn" id="addBtn" title="Add a sample" aria-label="Add a sample" aria-controls="gallery">+</button>
+      </div>
+      <!-- 갤러리 패널 탭 (js/gallery.js) — 지금은 쓰지 않음(숨김). 갤러리는 오프닝 화면의 사진 고리로 -->
+      <button type="button" class="gal-tab" id="galTab" aria-expanded="false" aria-controls="gallery" hidden>Gallery</button>
+      <!-- 왼쪽 위 화살표: 오프닝('Choose a Sample.' + 사진 고리)으로 돌아가기 — 화면에 놓인 사진은 그대로 -->
+      <button type="button" class="back-btn" id="homeTab" title="Back to Choose a Sample" aria-label="Back to Choose a Sample"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg></button>
+      <!-- 사진 고르기 패널 — 위 '+' 를 누르면 열림. 오프닝 화면의 사진 고리와 같은 사진들 (js/gallery.js) -->
+      <section class="card panel gallery" id="gallery" aria-label="Choose a sample" hidden>
+        <header class="c-head"><span class="c-label">Choose a Sample</span><span class="c-hint" id="galCount"></span><button type="button" class="g-close" id="galClose" title="Close" aria-label="Close">×</button></header>
+        <p class="gal-hint">Click a photo to place it. Drop or add new photos — each is cut out once and kept.</p>
+        <ul class="g-grid" id="galGrid"></ul>
+        <button type="button" class="g-add" id="galAdd" title="Add photos to the gallery" aria-label="Add photos to the gallery">+</button>
+      </section>
+      <!-- 오른쪽 위 묶음: Lab mode 스위치 + Reset (나란히) -->
+      <div class="top-right">
+      <!-- Layer: 고른 사진(또는 글자)의 겹침 순서 — 사진과 글자를 한 줄로 세움 (글자를 사진 뒤로 보낼 수 있음) · 맨 뒤 · 뒤로 · 앞으로 · 맨 앞 (js/app.js renderLayer) -->
+      <section class="card layer-card" id="layerCard" aria-label="Layer order">
+        <span class="c-label">Layer</span><span class="ly-name" id="layerName">none</span>
+        <button type="button" class="ly-btn" data-d="-Infinity" title="Send to back" aria-label="Send to back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v11M7.5 11.5 12 16l4.5-4.5M6 19.5h12"/></svg></button>
+        <button type="button" class="ly-btn" data-d="-1" title="Send backward" aria-label="Send backward"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></button>
+        <button type="button" class="ly-btn" data-d="1" title="Bring forward" aria-label="Bring forward"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 14l5-5 5 5"/></svg></button>
+        <button type="button" class="ly-btn" data-d="Infinity" title="Bring to front" aria-label="Bring to front"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V8M7.5 12.5 12 8l4.5 4.5M6 4.5h12"/></svg></button>
+      </section>
+      <!-- Lab mode 스위치 — 켜면 대시보드에 색이 생기고, 5개 모드를 골라 섞어 쓸 수 있음 -->
+      <section class="card lab-card" aria-label="Lab mode">
+        <span class="c-label">Lab mode</span>
+        <button type="button" class="switch" id="labSw" role="switch" aria-checked="false" aria-label="Lab mode"><i></i></button>
+      </section>
+      <!-- 오른쪽 위: Archive — 셔터로 찍어 보관한 포스터들 (js/archive.js) -->
+      <button type="button" class="reset-btn" id="archBtn" title="Open the archive of photos you took"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.2"/></svg>Archive</button>
+      <!-- 오른쪽 위: Record — 패널 없이 작품만 영상으로 녹화 (R) · 다시 누르면 멈추고 내려받음 (js/app.js startRecording) -->
+      <button type="button" class="reset-btn rec-btn" id="recBtn" title="Record a video of the artwork without the panels (R)"><i class="rec-dot" aria-hidden="true"></i><span id="recTime">Record</span></button>
+      <!-- 오른쪽 위: Reset —본 화면을 처음 상태로 (사진·글자·미생물 등 지우고 기온·습도·산소를 시작값으로). 오프닝으로는 가지 않음 -->
+      <button type="button" class="reset-btn" id="resetBtn" title="Reset the artwork to its starting state (Undo brings it back)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.5v4h4"/></svg>Reset</button>
+      <!-- Undo: 되돌리기 (Ctrl+Z · Ctrl+Shift+Z = 다시) — Reset 도 되돌림 (js/app.js 되돌리기) -->
+      <button type="button" class="reset-btn undo-btn" id="undoBtn" title="Nothing to undo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8H4V4"/><path d="M4.3 8A8 8 0 1 1 6 17"/></svg>Undo</button>
+      <!-- Notebook: 실험노트 (N) — 조건 지도 · 우선순위 · 할 일 · 숨은 조작 · 용어 (js/notebook.js) -->
+      <button type="button" class="reset-btn note-btn" id="noteBtn" title="Lab notebook (N)" aria-expanded="false" aria-controls="notebook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h11a2 2 0 0 1 2 2v13H7a2 2 0 0 1-2-2z"/><path d="M5 17.5a2 2 0 0 1 2-2h11"/><path d="M9 8.5h5M9 11.5h3"/></svg>Notebook</button>
+      </div>
+      <!-- 아래 가운데 말풍선: 작품이 지금 할 일을 한 문장으로 시킴 — 시킨 대로 하면 사라짐 (js/app.js renderDash) -->
+      <!-- 말풍선은 늘 하나: 새 단계가 오면 앞의 말풍선을 바꿔 쓰고 글자가 하나씩 써짐 (js/app.js talkStep, TALK.keep = 0) -->
+      <section class="card panel status" id="talk" aria-label="What to do next" role="status">
+        <ol class="talk-prev" id="talkPrev" aria-hidden="true"></ol>
+        <h2 class="st-title" id="dashTitle">Give me a sample — press + at the top left to choose one.</h2>
+        <div id="spinner" data-on="false" hidden></div>
+      </section>
+      <!-- 안내 문구 (저장 완료·오류 등) — 위 가운데에 잠깐 -->
+      <div class="notice" id="notice" role="status" hidden></div>
+      <!-- 누끼 따는 동안(화면이 뿌얘질 때) 오른쪽 위에 기다림 안내 -->
+      <div class="wait-note" id="waitNote" role="status" hidden><i aria-hidden="true"></i>Cutting out your sample — please wait a moment…</div>
+
+      <!-- 오른쪽 열: Mix/Vitality · Reactivity · 기온 · 습도 · 공기 / 왼쪽 열(col-left): Color · Light -->
+      <div class="col-right">
+        <!-- Lab mix: Lab mode 에서만 보임 — 5개 모드를 각각 켜고 꺼서 함께 씀 (기온·습도·산소 조건과 무관) -->
+        <section class="card panel c-mix" id="mixCard" hidden>
+          <!-- 사진·글자를 오른쪽 클릭하면 그 객체만 고름 (js/app.js objMix) — All = 전체로 돌아감 · Reset = 이 객체도 전체를 따르게 -->
+          <header class="c-head"><span class="c-label">Mix</span><span class="c-hint" id="mixHint">pick modes to blend</span></header>
+          <div class="mix-scope"><button type="button" class="mix-s" id="mixAll" title="Back to mixing every object" hidden>All</button><button type="button" class="mix-s" id="mixReset" title="Let this object follow the mix for all again" hidden>Reset</button></div>
+          <div class="mix-grid" id="mixGrid" role="group" aria-label="Modes to mix">
+            <button type="button" class="mix-btn" data-mode="frost" aria-pressed="false"><i></i>Frost</button>
+            <button type="button" class="mix-btn" data-mode="microbe" aria-pressed="false"><i></i>Microbes</button>
+            <button type="button" class="mix-btn" data-mode="bubble" aria-pressed="false"><i></i>Bubbles</button>
+            <button type="button" class="mix-btn" data-mode="corrode" aria-pressed="false"><i></i>Corrosion</button>
+            <button type="button" class="mix-btn" data-mode="desert" aria-pressed="false"><i></i>Desert</button>
+            <button type="button" class="mix-btn" data-mode="slime" aria-pressed="false"><i></i>Slime</button>
+            <button type="button" class="mix-btn" data-mode="moss" aria-pressed="false"><i></i>Moss</button>
+          </div>
+        </section>
+        <!-- Vitality: 끄면 결빙 모드(−10 °C 이하 성에 · 습하면 녹아 물), 켜면 생장 모드(+10 °C 이상 미생물이 누끼 사진 위와 클릭한 자리에서 자람) -->
+        <section class="card panel c-vital" id="vitalCard">
+          <header class="c-head"><span class="c-label">Life</span><span class="c-hint" id="vitalHint"></span></header>
+          <div class="vital-row">
+            <div class="c-big" id="vitalBig">Off</div>
+            <button type="button" class="switch" id="vitalSw" role="switch" aria-checked="false" aria-label="Life — living modes on or off" title="Life: on = living modes (Slime, Moss, Microbes) · off = non-living (Frost, Bubbles, Corrosion, Desert)"><i></i></button>
+          </div>
+        </section>
+        <!-- Reactivity: 늘 보임 — 점균이 자라는 빠르기·갈라짐·구불거림·커서와 클릭에 반응하는 정도 (js/slime.js) -->
+        <section class="card panel c-react" id="reactCard">
+          <header class="c-head"><span class="c-label">Growth Rate</span><span class="c-hint" id="reactHint">responsive</span></header>
+          <div class="c-big" id="reactBig">50%</div>
+          <div class="pill" id="pReact" data-look="marker" role="slider" tabindex="0" aria-label="Growth rate — how fast and strongly every mode spreads" title="Growth Rate: how fast and strongly the reaction spreads"></div>
+          <div class="c-scale"><span>calm</span><span>50</span><span>wild</span></div>
+        </section>
+        <!-- 슬라이더 모양 (js/app.js makePill — data-look): marker = 선 + 삼각 표식, ruler = 눈금자, dots = 점선, daylight = 해 곡선 -->
+        <section class="card panel c-temp">
+          <header class="c-head"><span class="c-label">Temperature</span><span class="c-hint" id="tempHint">above freezing</span></header>
+          <div class="c-big" id="tempBig">15°</div>
+          <div class="pill" id="pTemp" data-look="marker" role="slider" tabindex="0" aria-label="Temperature"></div>
+          <div class="c-scale"><span>−60°</span><span>0°</span><span>+60°</span></div>
+        </section>
+        <section class="card panel c-hum">
+          <header class="c-head"><span class="c-label">Humidity</span><span class="c-hint">relative</span></header>
+          <div class="c-big" id="humBig">50%</div>
+          <div class="pill" id="pHum" data-look="ruler" role="slider" tabindex="0" aria-label="Humidity"></div>
+          <div class="c-scale"><span>0</span><span>50</span><span>100</span></div>
+        </section>
+        <!-- Air: 산소(%) — Vitality 끔 + 습도 높음 + 산소 높음 → 기포 (js/bubble.js) -->
+        <section class="card panel c-air">
+          <header class="c-head"><span class="c-label">Air</span><span class="c-hint" id="airHint">oxygen</span></header>
+          <div class="c-big" id="airBig">21%</div>
+          <div class="pill" id="pAir" data-look="dots" role="slider" tabindex="0" aria-label="Oxygen"></div>
+          <div class="c-scale"><span>0</span><span>50</span><span>100</span></div>
+        </section>
+      </div>
+      <!-- 왼쪽 아래 열: Prism · Color · Light -->
+      <div class="col-left">
+        <!-- Type: 늘 보임 — 친 글자의 글꼴(표본 S-01~04, 돔의 층을 눌러 고름)과 굵기(Mass)를 고름 (js/typecard.js) -->
+        <section class="card panel c-type" id="typeCard" aria-label="Type">
+          <!-- 머리줄: Breathe 토글 — 켜면 굵기가 기온·습도에 따라 천천히 바뀜 -->
+          <header class="c-head"><span class="c-label">Type</span><button type="button" class="ty-breathe" role="switch" aria-checked="true" aria-label="Breathe" title="Breathe — the weight thins in heat and swells in humidity"><i></i>Breathe</button></header>
+          <div class="ty-body">
+            <svg class="ty-dome" viewBox="0 0 120 112" aria-hidden="true"></svg>
+            <div class="ty-list" role="radiogroup" aria-label="Typeface"></div>
+          </div>
+          <!-- 큰 숫자 = 지금 굵기(live), 옆 = 기준 굵기(base) -->
+          <div class="ty-foot"><span class="ty-big">900</span><span class="ty-base">base 900</span><span class="ty-mass">Mass</span></div>
+          <div class="ty-mass-bar" role="slider" tabindex="0" aria-label="Mass (base font weight)"><i class="ty-live" aria-hidden="true"></i></div>
+          <!-- Density: 자간 · 줄 간격 (0% 성김 · 70% 원래 · 100% 빽빽) -->
+          <div class="ty-dens-head"><span class="ty-dens-name">Density <b class="ty-dens-val">70%</b></span></div>
+          <div class="ty-dens-bar" role="slider" tabindex="0" aria-label="Density (letter and line spacing)"></div>
+        </section>
+        <!-- Prism: 색 2개 — 배경색 + 누끼 사진 위 효과(성에·미생물·기포·부식·사막·점균·이끼)의 색. 맨 왼쪽(흰 칸) = 원래 색 -->
+        <section class="card panel c-prism">
+          <header class="c-head"><span class="c-label" title="Spectrum: light split into colour — background and effect">Spectrum</span><span class="c-hint" id="prismHint">original</span></header>
+          <svg class="prism-art" id="prismArt" viewBox="0 0 200 54" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
+          <div class="pr-row"><span class="pr-name">Background</span><span class="pr-val"><i id="prismBgSw"></i><b id="prismBgName">Original</b></span></div>
+          <div class="pill" id="pPrismBg" data-look="spectrum" role="slider" tabindex="0" aria-label="Background color"></div>
+          <div class="pr-row"><span class="pr-name">Effect</span><span class="pr-val"><i id="prismFxSw"></i><b id="prismFxName">Original</b></span></div>
+          <div class="pill" id="pPrismFx" data-look="spectrum" role="slider" tabindex="0" aria-label="Effect color"></div>
+        </section>
+        <!-- 성에 색: 흰 선 지구본을 돌려 고름 — 극지방일수록 한색 → 흰색, 적도일수록 난색 -->
+        <section class="card panel c-color">
+          <header class="c-head"><span class="c-label" title="Latitude: the equator is warm and saturated, the poles are white and colourless">Latitude</span><span class="c-hint" id="globeLat">60°N</span></header>
+          <div class="c-globe">
+            <canvas class="mini-globe" id="miniGlobe" role="slider" tabindex="0" aria-label="Latitude globe — turn toward the poles for white and colourless, toward the equator for warm and saturated"></canvas>
+            <div class="c-big" id="colorName">Polar</div>
+          </div>
+        </section>
+        <!-- 빛(조도, lx) — 0.1 lx(밤) ~ 100k lx(한낮 햇빛) 로그 눈금. 해가 곡선을 따라 떠오름 -->
+        <section class="card panel c-light">
+          <header class="c-head"><span class="c-label">Light</span><span class="c-hint" id="lightHint">brightness 100%</span></header>
+          <div class="c-big" id="lightBig">100 lx</div>
+          <div class="pill" id="pLight" data-look="daylight" role="slider" tabindex="0" aria-label="Light level"></div>
+          <div class="c-scale"><span>0.1 lx</span><span>100</span><span>100k lx</span></div>
+        </section>
+      </div>
+
+      <!-- 아래 가운데 가로 상태바: 모드마다 오비탈(확률 밀도) 모양 픽토그램 + 값 — 픽토그램은 js/app.js drawPictograms 가 그림 -->
+      <div class="modebar" aria-label="Modes">
+        <div class="m-tile" data-mode="frost"><canvas class="m-pic" aria-hidden="true"></canvas><span class="m-name">Frost</span><b id="sumFrost">0%</b></div>
+        <div class="m-tile" data-mode="corrode"><canvas class="m-pic" aria-hidden="true"></canvas><span class="m-name">Corrosion</span><b id="sumCorrode">0%</b></div>
+        <div class="m-tile" data-mode="bubble"><canvas class="m-pic" aria-hidden="true"></canvas><span class="m-name">Bubbles</span><b id="sumBubbles">0%</b></div>
+        <div class="m-tile" data-mode="microbe"><canvas class="m-pic" aria-hidden="true"></canvas><span class="m-name">Microbes</span><b id="sumMicrobes">0%</b></div>
+        <div class="m-tile" data-mode="desert"><canvas class="m-pic" aria-hidden="true"></canvas><span class="m-name">Desert</span><b id="sumDesert">0%</b></div>
+        <div class="m-tile" data-mode="slime"><canvas class="m-pic" aria-hidden="true"></canvas><span class="m-name">Slime</span><b id="sumSlime">0%</b></div>
+        <div class="m-tile" data-mode="moss"><canvas class="m-pic" aria-hidden="true"></canvas><span class="m-name">Moss</span><b id="sumMoss">0%</b></div>
+      </div>
+      <!-- 재생 (지금은 숨김) -->
+      <section class="card panel c-play">
+        <header class="c-head"><span class="c-label">Playback</span><span class="c-hint">10 s steps</span></header>
+        <div class="transport">
+          <button type="button" class="t-btn" id="backBtn" title="Rewind 10 seconds" aria-label="Rewind 10 seconds"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 9.5A7 7 0 1 1 5 14"/><path d="M5 5v4.6h4.6"/><text x="12" y="15.2">10</text></svg></button>
+          <button type="button" class="t-btn t-play" id="dashPlay" title="Pause" aria-label="Pause"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="i-play" d="M9.5 7.5v9l7-4.5z"/><path class="i-pause" d="M9.3 7.5v9M14.7 7.5v9"/></svg></button>
+          <button type="button" class="t-btn" id="fwdBtn" title="Forward 10 seconds" aria-label="Forward 10 seconds"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.5 9.5A7 7 0 1 0 19 14"/><path d="M19 5v4.6h-4.6"/><text x="12" y="15.2">10</text></svg></button>
+        </div>
+      </section>
+      <!-- 사진 찍기는 스페이스 바 (js/app.js setupSaveButton) — 셔터 버튼 없음 -->
+    </div>
+    <!-- 처음 화면 (js/gallery.js): 가운데 큰 'Choose a Sample' + 그 둘레를 천천히 도는 갤러리 사진 고리. 화면에 사진을 끌어다 놓으면 갤러리로 -->
+    <div class="intro" id="intro" aria-label="Choose a Sample">
+      <div class="ring-wrap"><div class="ring" id="ring"></div></div>
+      <h1 class="intro-title" id="introTitle">Choose a Sample.</h1>
+    </div>
+    <!-- 아카이브 창 (js/archive.js): 포스터(실험 결과지)를 크게 가로로 늘어놓음. 포스터를 누르면 크게 보기, Edit 으로 본 화면에 불러와 다시 편집 -->
+    <div class="intro archive" id="archive" aria-label="Archive" hidden>
+      <!-- 책자: 펼친 두 쪽(흰 종이) — 첫 쪽은 표지 · 목차, 그다음 쪽마다 샘플 하나 (js/archive.js renderBook) -->
+      <div class="arch-book" id="archRail" aria-label="Archived results — book" aria-roledescription="book"></div>
+      <h1 class="intro-title">Archive.</h1>
+      <p class="arch-hint">Press Space to archive a sample.</p>
+      <button type="button" class="back-btn arch-back" id="archBack" title="Back to the artwork" aria-label="Back to the artwork"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg></button>
+      <div class="arch-view" id="archView" role="dialog" aria-label="Archived poster" hidden>
+        <img class="arch-img" id="archImg" alt="">
+        <div class="arch-bar">
+          <span class="arch-meta" id="archMeta"></span>
+          <button type="button" class="a-edit" id="archLoad" title="Load into the artwork and edit">Edit</button>
+          <button type="button" class="arch-b" id="archPrev" title="Previous (←)" aria-label="Previous"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg></button>
+          <button type="button" class="arch-b" id="archNext" title="Next (→)" aria-label="Next"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg></button>
+          <button type="button" class="arch-b" id="archSave" title="Download poster" aria-label="Download poster"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5v11M7 11l5 5 5-5M5 19.5h14"/></svg></button>
+          <button type="button" class="arch-b" id="archDel" title="Remove from archive" aria-label="Remove from archive"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 7h13M10 7V5h4v2M7.5 7l.8 12h7.4l.8-12"/></svg></button>
+          <button type="button" class="arch-b" id="archClose" title="Close (Esc)" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <!-- 찍는 순간 화면이 하얗게 번쩍임 -->
+    <div class="flash" id="flash" aria-hidden="true"></div>
+    <!-- 로딩(피사체 분리) 중 화면 전체가 그레인 낀 젖빛 유리처럼 뿌얘짐. 로딩이 끝나면 다시 맑아짐 -->
+    <div class="fog" id="fog" hidden aria-hidden="true"><i class="fog-grain"></i></div>
+    <div class="overlay" id="overlay" hidden></div>
+    <input type="file" id="addInput" accept="image/*" multiple hidden>
+    <input type="file" id="replaceInput" accept="image/*" hidden>
+    <input type="file" id="galInput" accept="image/*" multiple hidden>
+  </main>
+  <!-- Prism 효과색: 효과 캔버스의 밝기를 고른 색으로 (흰 점 → 그 색). js/app.js applyPrism 이 values 를 바꿈 -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <filter id="fxTint" color-interpolation-filters="sRGB"><feColorMatrix id="fxTintM" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter>
+  </svg>
+
+  <script src="js/config.js"></script>
+  <script src="js/textfield.js"></script>
+  <script src="js/engine-gl.js"></script>
+  <script src="js/engine-cpu.js"></script>
+  <script src="js/simulation.js"></script>
+  <script src="js/scenes.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/particles.js"></script>
+  <script src="js/frost.js"></script>
+  <script src="js/photo.js"></script>
+  <script src="js/growth.js"></script>
+  <script src="js/photoice.js"></script>
+  <script src="js/gallery.js"></script>
+  <script src="js/archive.js"></script>
+  <script src="js/microbe.js"></script>
+  <script src="js/bubble.js"></script>
+  <script src="js/corrode.js"></script>
+  <script src="js/desert.js"></script>
+  <script src="js/slime.js"></script>
+  <script src="js/moss.js"></script>
+  <script src="js/typing.js"></script>
+  <script src="js/typecard.js"></script>
+  <script src="js/frosttype.js"></script>
+  <script src="js/notebook.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/refpanel.js"></script>
+</body>
+</html>
