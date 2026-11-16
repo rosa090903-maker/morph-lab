@@ -118,6 +118,14 @@
     position: static; margin: 0; width: auto; align-self: stretch; flex: none;
     display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; align-items: start;
   }
+  /* 서랍을 펼치면 작품 전체가 서랍 위 빈 곳에 들어오게 줄임 (js/mobile.js 가 --fk 배율 · --fy 세로 이동을 계산)
+     크기 자체가 아니라 transform 이라 캔버스·자란 효과는 그대로, 손가락 위치도 그대로 맞음 */
+  .stage .frame { transform: translate(-50%, -50%) translate(var(--fx, 0px), var(--fy, 0px)) scale(var(--fk, 1)); transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  .stage .sel-h { transform: translate(-50%, -50%) scale(calc(1 / var(--fk, 1))); }   /* 사진 손잡이는 줄어든 화면에서도 손가락 크기 그대로 */
+  .stage .hud .sheet[data-open="true"] { max-height: 46vh; max-height: 46dvh; }   /* 펼쳤을 때 작품이 보일 자리를 남김 */
+  /* 말풍선은 한 줄로 작게 (안내는 그대로 보이되 작품 자리를 덜 차지) */
+  .stage[data-sheet="open"] .hud .card.panel.status { padding-top: 7px; padding-bottom: 7px; }
+  .stage[data-sheet="open"] .hud .st-title { -webkit-line-clamp: 1; font-size: 12.5px; }
   .stage .hud .sheet .col-right { order: 2; }
   .stage .hud .sheet .col-left { order: 3; }
   .stage .hud .sheet[data-open="false"] .col-right, .stage .hud .sheet[data-open="false"] .col-left { display: none; }

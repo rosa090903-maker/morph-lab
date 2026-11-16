@@ -532,7 +532,7 @@
     const box = $('selBox');
     const it = ice && selected != null ? ice.items.find((x) => x.id === selected) : null;
     if (!it || !ice.editable) { box.hidden = true; return; }
-    const k = $('frame').getBoundingClientRect().width / ice.canvas.width, vw = ice.view;   // 지금 프레임 크기 기준 (캔버스 px → CSS px), 휠 확대 반영
+    const k = $('frame').clientWidth / ice.canvas.width, vw = ice.view;   // 프레임 안쪽 CSS px 기준 (캔버스 px → CSS px), 휠 확대 반영 — 상자는 프레임 안에 있으므로 프레임이 css transform 으로 줄어도(휴대폰 서랍) 함께 줄어듦
     const [x, y, w, h] = [it.rect[0] * vw.zoom + vw.off[0], it.rect[1] * vw.zoom + vw.off[1], it.rect[2] * vw.zoom, it.rect[3] * vw.zoom];
     box.hidden = false;
     box.style.left = `${x * k}px`; box.style.top = `${y * k}px`; box.style.width = `${w * k}px`; box.style.height = `${h * k}px`;
@@ -2663,6 +2663,12 @@
     get dotsScene() { return particles.sceneId; },
     get fade() { return fade; },
     get zoom() { return ice ? ice.zoomTarget : 1; },          // 검증용: 확대 배율 (휠 · 두 손가락)
+    // 놓인 사진들의 자리 — 프레임 안쪽 CSS px [x, y, w, h] (휠·두 손가락 확대 반영). 휴대폰 서랍을 펼칠 때 사진이 다 보이게 맞추는 데 씀 (js/mobile.js)
+    get photoBoxes() {
+      if (!ice) return [];
+      const k = $('frame').clientWidth / ice.canvas.width, v = ice.view;
+      return ice.items.map((it) => [(it.rect[0] * v.zoom + v.off[0]) * k, (it.rect[1] * v.zoom + v.off[1]) * k, it.rect[2] * v.zoom * k, it.rect[3] * v.zoom * k]);
+    },
     get typingNow() { return !!(typing && typing.editing); },  // 검증용: 글자 입력 중인지 (더블클릭 · 두 번 톡톡)
     get particleCount() { return particles.count; },
     get frost() { return { freeze: frost.freeze, photo: frost.hasPhoto, temperature: frost.temperature, applied: frost.appliedTemperature, levels: frost.levels, branches: frost.branchCount, nuclei: frost.nuclei, fronts: frost.fronts, thaw: frost.thaw, wind: frost.wind, view: frost.view, running: frost.running }; },
